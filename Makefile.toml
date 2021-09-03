@@ -1,0 +1,22 @@
+[config]
+default_to_workspace = false
+
+[tasks.shaders]
+script_runner = "@shell"
+script = '''
+glslc -fshader-stage=compute shaders/src/bc1.glsl                            -O -g -o shaders/spirv/bc1.spv
+glslc -fshader-stage=compute shaders/src/bc1.glsl -DBC1_DITHER               -O -g -o shaders/spirv/bc1_dither.spv
+glslc -fshader-stage=compute shaders/src/bc4.glsl                            -O -g -o shaders/spirv/bc4.spv
+glslc -fshader-stage=compute shaders/src/bc6h.glsl                           -O -g -o shaders/spirv/bc6h.spv
+glslc -fshader-stage=compute shaders/src/dither555.glsl                      -O -g -o shaders/spirv/dither555.spv
+glslc -fshader-stage=compute shaders/src/eac.glsl -DR11_EAC                  -O -g -o shaders/spirv/eac_r11.spv
+glslc -fshader-stage=compute shaders/src/eac.glsl                            -O -g -o shaders/spirv/eac.spv
+glslc -fshader-stage=compute shaders/src/etc1.glsl -DOUTPUT_ERROR            -O -g -o shaders/spirv/etc1_with_error.spv
+glslc -fshader-stage=compute shaders/src/etc1.glsl                           -O -g -o shaders/spirv/etc1.spv
+glslc -fshader-stage=compute shaders/src/etc2_p.glsl                         -O -g -o shaders/spirv/etc2_p.spv
+glslc -fshader-stage=compute shaders/src/etc2_rgb_selector.glsl              -O -g -o shaders/spirv/etc2_rgb_selector.spv
+glslc -fshader-stage=compute shaders/src/etc2_rgb_selector.glsl -DHAS_ALPHA  -O -g -o shaders/spirv/etc2_rgba_selector.spv
+glslc -fshader-stage=compute shaders/src/etc2_rgba_stitch.glsl               -O -g -o shaders/spirv/etc2_rgba_stitch.spv
+glslc -fshader-stage=compute shaders/src/etc2_th_find_best_c0c1_k_means.glsl -O -g -o shaders/spirv/etc2_th_find_best_c0c1_k_means.spv
+glslc -fshader-stage=compute shaders/src/etc2_th.glsl                        -O -g -o shaders/spirv/etc2_th.spv
+'''
