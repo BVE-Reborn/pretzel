@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  RUSTFLAGS: --cfg=web_sys_unstable_apis
+
 jobs:
   build:
     timeout-minutes: 10
