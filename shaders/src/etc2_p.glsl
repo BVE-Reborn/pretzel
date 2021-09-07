@@ -9,7 +9,7 @@
 
 #define FLT_MAX 340282346638528859811704183484516925440.0f
 
-layout( local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
 layout(set = 0, binding = 0) uniform texture2D src_texture_split;
 layout(set = 0, binding = 1) uniform sampler src_sampler_split;
