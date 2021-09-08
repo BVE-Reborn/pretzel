@@ -16,7 +16,7 @@ layout(set = 0, binding = 3) readonly restrict buffer globalBuffer {
 	float2 c_oMatch5[256];
 	float2 c_oMatch6[256];
 };
-layout(set = 0, binding = 3) uniform Uniforms {
+layout(set = 0, binding = 4) uniform Uniforms {
 	uint p_numRefinements;
 };
 
