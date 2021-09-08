@@ -1,7 +1,13 @@
 use std::{mem::size_of, num::NonZeroU64};
 
 use arrayvec::ArrayVec;
-use wgpu::{BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferUsages, CommandEncoder, ComputePipeline, ComputePipelineDescriptor, Device, Extent3d, PipelineLayoutDescriptor, ShaderStages, StorageTextureAccess, TextureFormat, TextureSampleType, TextureView, TextureViewDimension, util::{BufferInitDescriptor, DeviceExt}};
+use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
+    BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
+    BindingResource, BindingType, Buffer, BufferBindingType, BufferUsages, CommandEncoder, ComputePassDescriptor,
+    ComputePipeline, ComputePipelineDescriptor, Device, Extent3d, PipelineLayoutDescriptor, Sampler, SamplerDescriptor,
+    ShaderStages, StorageTextureAccess, TextureFormat, TextureSampleType, TextureView, TextureViewDimension,
+};
 
 #[derive(Debug, Copy, Clone)]
 struct Bc1Tables {
@@ -10,11 +16,11 @@ struct Bc1Tables {
 }
 impl Bc1Tables {
     pub fn new() -> Self {
-        let match5 = bc1_table_omatch5
+        let match5 = TABLE_OMATCH5
             .iter()
             .map(|&arr| [arr[0] as f32, arr[1] as f32])
             .collect::<ArrayVec<_, 256>>();
-        let match6 = bc1_table_omatch6
+        let match6 = TABLE_OMATCH6
             .iter()
             .map(|&arr| [arr[0] as f32, arr[1] as f32])
             .collect::<ArrayVec<_, 256>>();
@@ -30,7 +36,7 @@ unsafe impl bytemuck::Zeroable for Bc1Tables {}
 unsafe impl bytemuck::Pod for Bc1Tables {}
 
 #[rustfmt::skip]
-static bc1_table_omatch5: [[u8; 2]; 256] = [
+static TABLE_OMATCH5: [[u8; 2]; 256] = [
     [0, 0],   [0, 0],   [0, 1],   [0, 1],   [1, 0],   [1, 0],   [1, 0],   [1, 1],
     [1, 1],   [2, 0],   [2, 0],   [0, 4],   [2, 1],   [2, 1],   [2, 1],   [3, 0],
     [3, 0],   [3, 0],   [3, 1],   [1, 5],   [3, 2],   [3, 2],   [4, 0],   [4, 0],
@@ -66,7 +72,7 @@ static bc1_table_omatch5: [[u8; 2]; 256] = [
 ];
 
 #[rustfmt::skip]
-static bc1_table_omatch6: [[u8; 2]; 256] = [
+static TABLE_OMATCH6: [[u8; 2]; 256] = [
      [0, 0],   [0, 1],   [1, 0],   [1, 0],   [1, 1],   [2, 0],   [2, 1],   [3, 0],
      [3, 0],   [3, 1],   [4, 0],   [4, 0],   [4, 1],   [5, 0],   [5, 1],   [6, 0],
      [6, 0],   [6, 1],   [7, 0],   [7, 0],   [7, 1],   [8, 0],   [8, 1],   [8, 1],
@@ -102,6 +108,7 @@ static bc1_table_omatch6: [[u8; 2]; 256] = [
 ];
 
 pub struct Bc1Encoder {
+    sampler: Sampler,
     bgl: BindGroupLayout,
     pipeline: ComputePipeline,
     table_buffer: Buffer,
@@ -163,6 +170,8 @@ impl Bc1Encoder {
             ],
         });
 
+        let sampler = device.create_sampler(&SamplerDescriptor::default());
+
         let table = Bc1Tables::new();
 
         let table_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -190,11 +199,60 @@ impl Bc1Encoder {
             bgl,
             pipeline,
             table_buffer,
+            sampler,
         }
     }
 
-    pub fn execute(encoder: &mut CommandEncoder, source: &TextureView, dest: &TextureView, size: Extent3d) {
+    pub fn execute(
+        &self,
+        device: &Device,
+        encoder: &mut CommandEncoder,
+        source: &TextureView,
+        dest: &TextureView,
+        size: Extent3d,
+    ) {
+        let refinements = 2_u32;
+        let refinement_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("bc1 refinement buffer"),
+            contents: bytemuck::bytes_of(&refinements),
+            usage: BufferUsages::UNIFORM,
+        });
 
+        let bg = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("bc1 bg"),
+            layout: &self.bgl,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::TextureView(source),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::Sampler(&self.sampler),
+                },
+                BindGroupEntry {
+                    binding: 2,
+                    resource: BindingResource::TextureView(dest),
+                },
+                BindGroupEntry {
+                    binding: 3,
+                    resource: BindingResource::Buffer(self.table_buffer.as_entire_buffer_binding()),
+                },
+                BindGroupEntry {
+                    binding: 4,
+                    resource: BindingResource::Buffer(refinement_buffer.as_entire_buffer_binding()),
+                },
+            ],
+        });
+
+        let mut cpass = encoder.begin_compute_pass(&ComputePassDescriptor {
+            label: Some("bc1 encode"),
+        });
+
+        cpass.set_pipeline(&self.pipeline);
+        cpass.set_bind_group(0, &bg, &[]);
+        cpass.dispatch((size.width + 31) & !31, (size.height + 31) & !31, 1);
+
+        drop(cpass);
     }
 }
- 
