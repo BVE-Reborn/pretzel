@@ -9,6 +9,11 @@ name = "pretzel"
 path = "src/main.rs"
 
 [dependencies]
+bytemuck = "1"
+env_logger = { version = "0.9", default-features = false, features = ["termcolor", "atty"] }
 image = "0.23"
+log = "0.4"
 pretzel = { version = "0.1", path = ".." }
+pollster = "0.2"
 structopt = "0.3"
+wgpu = "0.10"

@@ -142,7 +142,7 @@ impl Bc1Encoder {
                     visibility: ShaderStages::COMPUTE,
                     ty: BindingType::StorageTexture {
                         access: StorageTextureAccess::WriteOnly,
-                        format: TextureFormat::Rg32Float,
+                        format: TextureFormat::Rg32Uint,
                         view_dimension: TextureViewDimension::D2,
                     },
                     count: None,
